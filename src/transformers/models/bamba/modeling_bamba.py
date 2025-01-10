@@ -488,9 +488,9 @@ class BambaMixer(nn.Module):
         self.dt_bias = nn.Parameter(torch.ones(self.num_heads))
 
         # time step scale, a naive approch to make total time horizon constant for longer context
-        self.context_length = config.context_length
-        assert self.context_length > 0, "Expected context length must be a positive integer."
-        self.dt_scale = 4096.0 / self.context_length
+        # training context length / max input context length
+        assert config.max_position_embeddings > 0, "Max position embeddings must be a positive integer."
+        self.dt_scale = 4096.0 / config.max_position_embeddings
 
         # S4D real initialization. These are not discretized!
         # The core is to load them, compute the discrete states, then write the updated state. Keeps the memory bounded

@@ -76,7 +76,7 @@ class BambaConfig(PretrainedConfig):
             The id of the "beginning-of-sequence" token.
         eos_token_id (`int`, *optional*, defaults to 2):
             The id of the "end-of-sequence" token.
-        max_position_embeddings (`int`, *optional*, defaults to 262144):
+        max_position_embeddings (`int`, *optional*, defaults to 4096):
             Max cached sequence length for the model
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
@@ -100,8 +100,6 @@ class BambaConfig(PretrainedConfig):
             Flag indicating whether or not to use bias in the convolution layer of the mamba mixer block.
         mamba_proj_bias (`bool`, *optional*, defaults to `False`):
             Flag indicating whether or not to use bias in the input and output projections (["in_proj", "out_proj"]) of the mamba mixer block
-        context_length (`int`, *optional*, defaults to 4096):
-            Expected context length of the model, used for scaling down time steps while keeping total time horizon constant
     """
 
     model_type = "bamba"
@@ -124,7 +122,7 @@ class BambaConfig(PretrainedConfig):
         pad_token_id=0,
         bos_token_id=1,
         eos_token_id=2,
-        max_position_embeddings=262144,
+        max_position_embeddings=4096,
         attention_dropout=0.0,
         attn_layer_indices=None,
         mamba_n_heads=128,
@@ -136,7 +134,6 @@ class BambaConfig(PretrainedConfig):
         mamba_chunk_size=256,
         mamba_conv_bias=True,
         mamba_proj_bias=False,
-        context_length=4096,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -188,8 +185,6 @@ class BambaConfig(PretrainedConfig):
         self.mamba_chunk_size = mamba_chunk_size
         self.mamba_conv_bias = mamba_conv_bias
         self.mamba_proj_bias = mamba_proj_bias
-
-        self.context_length = context_length
 
         super().__init__(
             pad_token_id=pad_token_id,
