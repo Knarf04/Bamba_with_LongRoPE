@@ -100,7 +100,8 @@ class BambaConfig(PretrainedConfig):
             Flag indicating whether or not to use bias in the convolution layer of the mamba mixer block.
         mamba_proj_bias (`bool`, *optional*, defaults to `False`):
             Flag indicating whether or not to use bias in the input and output projections (["in_proj", "out_proj"]) of the mamba mixer block
-
+        context_length (`int`, *optional*, defaults to 4096):
+            Expected context length of the model, used for scaling down time steps while keeping total time horizon constant
     """
 
     model_type = "bamba"
@@ -135,6 +136,7 @@ class BambaConfig(PretrainedConfig):
         mamba_chunk_size=256,
         mamba_conv_bias=True,
         mamba_proj_bias=False,
+        context_length=4096,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -186,6 +188,8 @@ class BambaConfig(PretrainedConfig):
         self.mamba_chunk_size = mamba_chunk_size
         self.mamba_conv_bias = mamba_conv_bias
         self.mamba_proj_bias = mamba_proj_bias
+
+        self.context_length = context_length
 
         super().__init__(
             pad_token_id=pad_token_id,

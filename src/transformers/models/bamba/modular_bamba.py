@@ -265,6 +265,11 @@ class BambaMixer(nn.Module):
         # instantiate once and copy inv_dt in init_weights of PretrainedModel
         self.dt_bias = nn.Parameter(torch.ones(self.num_heads))
 
+        # time step scale, a naive approch to make total time horizon constant for longer context
+        self.context_length = config.context_length
+        assert self.context_length > 0, "Expected context length must be a positive integer."
+        self.dt_scale = 4096.0 / self.context_length
+
         # S4D real initialization. These are not discretized!
         # The core is to load them, compute the discrete states, then write the updated state. Keeps the memory bounded
         A = torch.arange(1, self.num_heads + 1)
@@ -295,6 +300,9 @@ class BambaMixer(nn.Module):
         # 1. Gated MLP's linear projection
         hidden_states = apply_mask_to_padding_states(hidden_states, attention_mask)
         projected_states = self.in_proj(hidden_states)
+
+        # Scale down delta to simulate keeping the total time horizon constant
+        projected_states[..., -self.num_heads:] *= self.dt_scale
 
         # Set up dimensions for reshapes later
         batch_size, seq_len, _ = hidden_states.shape
@@ -466,6 +474,10 @@ class BambaMixer(nn.Module):
         # 1. Gated MLP's linear projection
         input_states = apply_mask_to_padding_states(input_states, attention_mask)
         projected_states = self.in_proj(input_states)
+
+        # Scale down delta to simulate keeping the total time horizon constant
+        projected_states[..., -self.num_heads:] *= self.dt_scale
+
         gate, hidden_states_B_C, dt = projected_states.split(
                 [self.intermediate_size, self.conv_dim, self.num_heads], dim=-1
         )
@@ -922,7 +934,10 @@ class BambaModel(BambaPreTrainedModel):
 
         self._attn_implementation = config._attn_implementation
         self.final_layernorm = BambaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+
+        # Add flag for customized layerwise rescaling of rotary embedding
         self.rotary_emb = BambaRotaryEmbedding(config=config)
+        self.rotary_emb_layerwise = False 
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
@@ -986,13 +1001,18 @@ class BambaModel(BambaPreTrainedModel):
         mamba_mask = self._update_mamba_mask(attention_mask, cache_position)
 
         # create position embeddings to be shared across the decoder layers
-        position_embeddings = self.rotary_emb(hidden_states, position_ids)
+        if not self.rotary_emb_layerwise:
+            position_embeddings = self.rotary_emb(hidden_states, position_ids)
 
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
 
         for decoder_layer in self.layers:
             # Depending on the layer type we opt for 2D base attention mask (Mamba) or 4D causal mask (Attention)
+
+            if self.rotary_emb_layerwise:
+                position_embeddings = self.rotary_emb(hidden_states, position_ids, decoder_layer.layer_idx)
+        
             layer_mask = mamba_mask if decoder_layer.layer_type == "mamba" else causal_mask
 
             if output_hidden_states:
