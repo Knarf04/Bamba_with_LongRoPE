@@ -707,6 +707,7 @@ class BambaDecoderLayer(JambaAttentionDecoderLayer):
         ffn_layer_class = BambaMLP if num_experts == 1 else None
         self.feed_forward = ffn_layer_class(config)
 
+        self.layer_idx = layer_idx
         self.layer_type = layer_type
         if layer_type == "mamba":
             self.mamba = BambaMixer(config=config, layer_idx=layer_idx)

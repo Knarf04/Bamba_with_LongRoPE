@@ -956,7 +956,8 @@ class BambaDecoderLayer(nn.Module):
         self.feed_forward = ffn_layer_class(config)
         self.input_layernorm = BambaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.pre_ff_layernorm = BambaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-
+        
+        self.layer_idx = layer_idx
         self.layer_type = layer_type
         if layer_type == "mamba":
             self.mamba = BambaMixer(config=config, layer_idx=layer_idx)
